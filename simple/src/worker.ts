@@ -1,4 +1,4 @@
-import { IRequest, Router, json, html, createResponse, error } from 'itty-router';
+import { IRequest, Router, json, html, createResponse, error, text } from 'itty-router';
 
 const router = Router();
 
@@ -17,11 +17,12 @@ router.get('/', () => html(`<!DOCTYPE html>
 	.post('/upload-file', async (request, env: Env) => {
 		const formData = await request.formData();
 		const file = formData.get('file') as unknown as File;
+		
 		const client = new AssemblyAiClient(env.ASSEMBLYAI_API_KEY);
 		const uploadUrl = await client.uploadFile(file);
 		let transcript = await client.createTranscript(uploadUrl);
-		const newUrl = new URL(`/transcript/${transcript.id}`, request.url);
 
+		const newUrl = new URL(`/transcript/${transcript.id}`, request.url);
 		return Response.redirect(newUrl.toString(), 303);
 	})
 	.get('/transcript/:id', async (request: IRequest, env: Env) => {
@@ -29,9 +30,12 @@ router.get('/', () => html(`<!DOCTYPE html>
 		const client = new AssemblyAiClient(env.ASSEMBLYAI_API_KEY);
 		const transcript = await client.getTranscript(id);
 		if (transcript.status === 'completed') {
-			return json(transcript);
+			return text(transcript.text);
+		}
+		else if (transcript.status === 'error') {
+			return text(transcript.error);
 		} else {
-			return json(transcript, {
+			return text(transcript.status, {
 				headers: {
 					'Refresh': '3' // refreshes the browser every 3 seconds
 				}

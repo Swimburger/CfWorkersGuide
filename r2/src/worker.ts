@@ -24,8 +24,8 @@ router.get('/', () => html(`<!DOCTYPE html>
 		const client = new AssemblyAiClient(env.ASSEMBLYAI_API_KEY);
 		const fileUrl = createUrl(`/file/${objectKey}`, request);
 		let transcript = await client.createTranscript(fileUrl);
-		const newUrl = new URL(`/transcript/${transcript.id}`, request.url);
 
+		const newUrl = new URL(`/transcript/${transcript.id}`, request.url);
 		return Response.redirect(newUrl.toString(), 303);
 	})
 	.get('/file/:key', async (request: IRequest, env: Env) => {
