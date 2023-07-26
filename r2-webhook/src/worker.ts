@@ -1,4 +1,5 @@
-import { IRequest, Router, json, html, text, error } from 'itty-router';
+import { IRequest, Router, json, html, error } from 'itty-router';
+import { AssemblyAiClient } from './assemblyai';
 
 const router = Router();
 
@@ -24,7 +25,7 @@ router.get('/', () => html(`<!DOCTYPE html>
 		const client = new AssemblyAiClient(env.ASSEMBLYAI_API_KEY);
 		const fileUrl = createUrl(`/file/${objectKey}`, request);
 		const webhookUrl = createUrl(`/webhook`, request);
-		let transcript = await client.createTranscript(fileUrl, webhookUrl);
+		let transcript = await client.createTranscript({ audio_url: fileUrl, webhook_url: webhookUrl });
 
 		const newUrl = new URL(`/file/${transcript.id}.srt`, request.url);
 		return Response.redirect(newUrl.toString(), 303);
@@ -59,62 +60,6 @@ router.get('/', () => html(`<!DOCTYPE html>
 		await env.transcriptsBucket.put(objectKey, subtitles);
 	});
 
-class AssemblyAiClient {
-	private static readonly baseUrl = 'https://api.assemblyai.com/v2';
-	constructor(private readonly apiKey: string) { }
-	public async uploadFile(file: File) {
-		const response = await fetch(`${AssemblyAiClient.baseUrl}/upload`, {
-			method: 'POST',
-			headers: {
-				authorization: this.apiKey
-			},
-			body: file.stream()
-		});
-		const json = (await response.json()) as { 'upload_url': string };
-		return json.upload_url;
-	}
-	public async createTranscript(fileUrl: string, webhookUrl: string) {
-		const response = await fetch(`${AssemblyAiClient.baseUrl}/transcript`, {
-			method: 'POST',
-			headers: {
-				authorization: this.apiKey,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				audio_url: fileUrl,
-				webhook_url: webhookUrl,
-			})
-		});
-		const transcript = (await response.json()) as Transcript;
-		return transcript;
-	}
-	public async getTranscript(id: string): Promise<Transcript> {
-		const response = await fetch(`${AssemblyAiClient.baseUrl}/transcript/${id}`, {
-			headers: {
-				authorization: this.apiKey,
-			},
-		})
-		const transcript = (await response.json()) as Transcript;
-		return transcript;
-	}
-	public async getSubtitles(id: string, subtitleFormat: 'srt' | 'vtt'): Promise<string> {
-		const response = await fetch(`${AssemblyAiClient.baseUrl}/transcript/${id}/${subtitleFormat}`, {
-			headers: {
-				authorization: this.apiKey,
-			},
-		})
-		const subtitles = await response.text();
-		return subtitles;
-	}
-}
-
-type Transcript = {
-	id: string;
-	text: string;
-	status: string;
-	error: any;
-	audio_url: string;
-}
 type WebhookBody = {
 	transcript_id: string;
 	status: string;

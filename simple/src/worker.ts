@@ -21,7 +21,7 @@ router.get('/', () => html(`<!DOCTYPE html>
 
     const client = new AssemblyAiClient(env.ASSEMBLYAI_API_KEY);
     const uploadUrl = await client.uploadFile(file);
-    let transcript = await client.createTranscript(uploadUrl);
+    let transcript = await client.createTranscript({ audio_url: uploadUrl });
 
     const newUrl = new URL(`/transcript/${transcript.id}`, request.url);
     return Response.redirect(newUrl.toString(), 303);
